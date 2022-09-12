@@ -1,66 +1,50 @@
-import { signIn, useSession } from "next-auth/react";
-import { useAccount, useSignMessage, useNetwork } from "wagmi";
-import { useRouter } from "next/router";
-import axios from "axios";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useEffect } from "react";
-import styles from "../styles/Home.module.css";
+import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
+import { signIn } from 'next-auth/react';
+import { useAccount, useConnect, useSignMessage, useDisconnect } from 'wagmi';
+import { useRouter } from 'next/router';
+import axios from 'axios';
 
 function SignIn() {
-  const { isConnected, address, status: accStatus } = useAccount();
-  const { chain } = useNetwork();
-  const { status } = useSession();
-  const { signMessageAsync } = useSignMessage();
-  const { push } = useRouter();
+    const { connectAsync } = useConnect();
+    const { disconnectAsync } = useDisconnect();
+    const { isConnected } = useAccount();
+    const { signMessageAsync } = useSignMessage();
+    const { push } = useRouter();
 
-  useEffect(() => {
     const handleAuth = async () => {
-      const userData = { address, chain: chain.id, network: "evm" };
+        if (isConnected) {
+            await disconnectAsync();
+        }
 
-      const { data } = await axios.post("/api/auth/request-message", userData, {
-        headers: {
-          "content-type": "application/json",
-        },
-      });
+        const { account, chain } = await connectAsync({ connector: new MetaMaskConnector() });
 
-      const message = data.message;
-      console.log(message);
+        const userData = { address: account, chain: chain.id, network: 'evm' };
 
-      const signature = await signMessageAsync({ message });
-      console.log(signature);
+        const { data } = await axios.post('/api/auth/request-message', userData, {
+            headers: {
+                'content-type': 'application/json',
+            },
+        });
 
-      // redirect user after success authentication to '/user' page
-      const res = await signIn("credentials", {
-        message,
-        signature,
-        redirect: false,
-        callbackUrl: "/user",
-      });
-      console.log(res);
-      /**
-       * instead of using signIn(..., redirect: "/user")
-       * we get the url from callback and push it to the router to avoid page refreshing
-       */
-      push(res.url);
+        const message = data.message;
+
+        const signature = await signMessageAsync({ message });
+
+        // redirect user after success authentication to '/user' page
+        const { url } = await signIn('credentials', { message, signature, redirect: false, callbackUrl: '/user' });
+        /**
+         * instead of using signIn(..., redirect: "/user")
+         * we get the url from callback and push it to the router to avoid page refreshing
+         */
+        push(url);
     };
-    if (
-      status === "unauthenticated" &&
-      isConnected &&
-      accStatus === "connected"
-    ) {
-      handleAuth();
-    }
-    console.log(accStatus);
-  }, [status, isConnected, accStatus]);
 
-  return (
-    <div className={styles.container}>
-      <main className={styles.main}>
-        <h3>Web3 Authentication</h3>
-        <ConnectButton />
-      </main>
-    </div>
-  );
+    return (
+        <div>
+            <h3>Web3 Authentication</h3>
+            <button onClick={() => handleAuth()}>Authenticate via Metamask</button>
+        </div>
+    );
 }
 
 export default SignIn;

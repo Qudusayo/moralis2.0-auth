@@ -2,8 +2,20 @@ import Head from "next/head";
 import Image from "next/image";
 import styles from "../styles/Home.module.css";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function Home() {
+  useEffect(() => {
+    async function load(url = "https://localhost:3000/tokenid0") {
+      console.log(url);
+      let res = await fetch(url)
+        .then((res) => res.ok)
+        .catch(() => false);
+      console.log(res);
+    }
+    load();
+  }, []);
+
   return (
     <div className={styles.container}>
       <Head>

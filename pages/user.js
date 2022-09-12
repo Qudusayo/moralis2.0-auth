@@ -1,4 +1,5 @@
 import { getSession, signOut } from "next-auth/react";
+import { getToken } from "next-auth/jwt";
 import { useDisconnect } from "wagmi";
 
 // gets a prop from getServerSideProps
@@ -22,7 +23,9 @@ function User({ user }) {
 
 export async function getServerSideProps(context) {
   const session = await getSession(context);
-  console.log(session);
+  const token = await getToken(context);
+  console.log("SESSION", session);
+  console.log("JWT", token);
 
   // redirect if not authenticated
   if (!session) {
